@@ -1,12 +1,12 @@
-# xxx 自动聊天机器人
+# aiZoro 自动作图+任务机器人
 
-邀请链接：xxx
+邀请链接：https://ai.zoro.org?refCode=SsjS8-RcFDJBtnp
 
-这是一个用于自动完成 xxx 平台每日聊天任务的 Node.js 脚本。
+这是一个用于自动完成 aiZoro 平台每日上传图片任务及做任务的 Node.js 脚本。
 
 ## 功能特性
-- 自动登录 xxx 平台
-- 自动完成每日聊天任务
+- 自动登录 aiZoro 平台
+- 自动完成每日上传图片任务
 - 支持多账号并发执行
 - 支持代理设置
 - 定时任务功能（默认每天北京时间早上8点执行）
@@ -20,6 +20,7 @@
 ```bash
 npm install
 ```
+
 ### 3. 配置账号信息
 在 `private_keys.txt` 文件中配置你的 Coresky 私钥（一行一个）。
 ```txt
@@ -34,13 +35,10 @@ socks5://127.0.0.1:1080
 ...
 ```
 
-在 `messages.txt` 文件中配置你的随机问题（一行一个）。
-```txt
-who are you?
-...
-```
+新建 images 文件夹，在该文件夹下保存任意张图片。
 
 在 `config.yaml` 文件中配置基础配置。
+
 ```yaml
 base:
   api_base_url: 'https://api1-pp.klokapp.ai/v1' # 不用改

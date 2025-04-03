@@ -120,7 +120,7 @@ class Worker {
             const randomName = `${generate()}${Math.floor(Math.random() * 10000)}`;
             await this.client.get(`/user/check-nickname/${randomName}`);
             await this.client.post(`/user/set-nickname?nickname=${randomName}`);
-            log(chalk.green(` ✅ 用户名设置成功，用户名：${response?.user?.nickname}`));
+            log(chalk.green(` ✅ 用户名设置成功，用户名：${randomName}`));
         } catch (error) {
             console.error('设置用户名失败:', error.response?.status, error.response?.data || error.message);
             return null;

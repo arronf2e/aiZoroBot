@@ -49,7 +49,7 @@ async function startWorkers() {
   function createNextWorker() {
     while (activeWorkers < maxThreads && currentIndex < PRIVATE_KEYS.length) {
       const privateKey = PRIVATE_KEYS[currentIndex];
-      const proxy = PROXY_URLS[currentIndex % PROXY_URLS.length];
+      const proxy = PROXY_URLS?.length > 0 ? PROXY_URLS[currentIndex % PROXY_URLS.length] : null;
       const workerIndex = ++currentIndex; // 使用自增后的索引作为线程编号
       activeWorkers++;
       const worker = new Worker(path.join(__dirname, 'worker.js'), {

@@ -238,19 +238,34 @@ class Worker {
 
     async doMissionOnboard(label, uuid) {
         log(chalk.green(`⏳ 开始执行 ${label} 任务...`));
-        try {
-            const formData = await this.getRandomImage();
-            await this.client.post(`/mission-activity/${uuid}`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
+        const maxRetries = 3; // 最大重试次数
+        let retryCount = 0;
+        
+        do {
+            try {
+                const formData = await this.getRandomImage();
+                await this.client.post(`/mission-activity/${uuid}`, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                });
+                log(chalk.green(` ✅ ${label} 任务执行成功`));
+                await delay(10000);
+                await this.getMissonOnboard();
+                return; // 成功则退出方法
+            } catch (error) {
+                retryCount++;
+                if (retryCount <= maxRetries) {
+                    const delayTime = 2000 * retryCount; // 指数退避延迟
+                    log(chalk.yellow(`⚠️ ${label} 任务执行失败（${retryCount}/${maxRetries}次重试）: ${error.message}，${delayTime/1000}秒后重试...`));
+                    await delay(delayTime);
+                } else {
+                    log(chalk.red(`❌ ${label} 任务最终失败，已尝试${maxRetries}次`));
+                    console.error('执行onboard任务失败:', error.response?.status, error.response?.data || error.message);
+                    break;
                 }
-            });
-            log(chalk.green(` ✅ ${label} 任务执行成功`));
-            await delay(10000)
-            await this.getMissonOnboard(); // 任务完成后再次检查任务执行状态
-        } catch (error) {
-            console.error('执行onboard任务失败:', error.response?.status, error.response?.data || error.message);
-        }
+            }
+        } while (retryCount <= maxRetries);
     }
 
     async getProfileTasks() {

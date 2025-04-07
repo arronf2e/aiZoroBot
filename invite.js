@@ -86,4 +86,16 @@ async function main() {
     console.log('🛡️ 请妥善保管生成的助记词和私钥！');
 }
 
-main();
+if (import.meta.url === `file://${process.argv[1]}`) {
+    // 每小时执行一次（在整点执行）
+    cron.schedule('0 * * * *', () => {
+        console.log(chalk.cyan(`\n🕒 ${new Date().toLocaleString()} 开始执行邀请任务`));
+        main();
+    }, {
+        timezone: "Asia/Shanghai"
+    });
+
+    // 立即执行一次
+    console.log(chalk.cyan(`\n🕒 ${new Date().toLocaleString()} 立即执行邀请任务`));
+    main();
+}

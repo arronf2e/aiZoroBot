@@ -66,22 +66,23 @@ function saveWallets(wallets, randomReferralCode) {
 async function main() {
     // 从 REFERRAL_CODE 中随机获取一个邀请码
     const referralCodes = JSON.parse(process.env.REFERRAL_CODE);
-    const randomReferralCode = referralCodes[Math.floor(Math.random() * referralCodes.length)];
-    console.log(`🎁 本次使用的邀请码: ${randomReferralCode}`);
+    for (const referralCode of referralCodes) {
+        console.log(`🎁 本次使用的邀请码: ${referralCode}`);
 
-    const walletCount = process.env.INVITE_COUNT;
-    const wallets = generateWallets(parseInt(walletCount));
+        const walletCount = process.env.INVITE_COUNT;
+        const wallets = generateWallets(parseInt(walletCount));
 
-    const saveWallet = [];
+        const saveWallet = [];
 
-    for (const wallet of wallets) {
-        console.log('------------------------------');
-        console.log(`🔑 钱包地址: ${wallet.address} 开始注册`);
-        await mainLoop(wallet.privateKey, null, randomReferralCode);
-        console.log('------------------------------');
-        saveWallet.push(wallet);
+        for (const wallet of wallets) {
+            console.log('------------------------------');
+            console.log(`🔑 钱包地址: ${wallet.address} 开始注册`);
+            await mainLoop(wallet.privateKey, null, referralCode);
+            console.log('------------------------------');
+            saveWallet.push(wallet);
+        }
+        saveWallets(saveWallet, referralCode);
     }
-    saveWallets(saveWallet, randomReferralCode);
     console.log('🛡️ 请妥善保管生成的助记词和私钥！');
 }
 

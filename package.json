@@ -2,7 +2,6 @@
   "name": "bot_template",
   "version": "1.0.0",
   "main": "bot.js",
-  "type": "module",
   "scripts": {
     "start": "node main.js"
   },

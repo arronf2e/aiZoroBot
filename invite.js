@@ -1,24 +1,28 @@
-import fs from 'fs';
-import {ethers} from 'ethers';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
-import { mainLoop } from './main.js';
+const fs = require('fs');
+const { ethers } = require('ethers');
+const path = require('path');
+const dotenv = require('dotenv');
+const cron = require('node-cron');
+const { mainLoop } = require('./main.js');
 
 dotenv.config();
+
+// 异步加载 chalk
+let chalk;
+import('chalk').then(module => {
+    chalk = module.default;
+}).catch(err => {
+    console.error('Failed to import chalk:', err);
+    process.exit(1);
+});
 
 if (!process.env.REFERRAL_CODE) {
     console.error('❌ 请在 .env 文件中设置 REFERRAL_CODE');
     process.exit(1);
 }
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WALLET_FILE = path.join(__dirname, 'wallet.csv');
 
-// 新增 sleep 方法
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 function generateWallets(count = 1) {
     const wallets = [];
@@ -86,16 +90,36 @@ async function main() {
     console.log('🛡️ 请妥善保管生成的助记词和私钥！');
 }
 
-if (process.env.PM2 || import.meta.url === `file://${process.argv[1]}`) {
-    // 每小时执行一次（在整点执行）
-    cron.schedule('0 * * * *', () => {
-        console.log(chalk.cyan(`\n🕒 ${new Date().toLocaleString()} 开始执行邀请任务`));
-        main();
-    }, {
-        timezone: "Asia/Shanghai"
-    });
+function startApp() {
+    if (!chalk) return;
 
-    // 立即执行一次
-    console.log(chalk.cyan(`\n🕒 ${new Date().toLocaleString()} 立即执行邀请任务`));
-    main();
+    if (require.main === module) {
+        // 每小时执行一次（在整点执行）
+        cron.schedule('0 * * * *', () => {
+            console.log(chalk.cyan(`\n🕒 ${new Date().toLocaleString()} 开始执行邀请任务`));
+            main();
+        }, {
+            timezone: "Asia/Shanghai"
+        });
+
+        // 立即执行一次
+        console.log(chalk.cyan(`\n🕒 ${new Date().toLocaleString()} 立即执行邀请任务`));
+        main();
+    }
 }
+
+// 在 chalk 加载完成后启动应用
+if (require.main === module) {
+    const checkChalk = setInterval(() => {
+        if (chalk) {
+            clearInterval(checkChalk);
+            startApp();
+        }
+    }, 100);
+}
+
+module.exports = {
+    generateWallets,
+    saveWallets,
+    main
+};

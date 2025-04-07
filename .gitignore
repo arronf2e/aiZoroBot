@@ -137,3 +137,5 @@ dist
 
 private_keys.txt
 proxies.txt
+*.csv
+.env

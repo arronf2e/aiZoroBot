@@ -1,14 +1,20 @@
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import chalk from 'chalk';
-import cron from 'node-cron';
-import dotenv from 'dotenv';
-import { Bot } from './bot.js';
-import { thread_count, thread_delay, log, sleep } from './utils.js';
+const path = require('path');
+const fs = require('fs');
+const cron = require('node-cron');
+const dotenv = require('dotenv');
+const { Bot } = require('./bot.js');
+const { thread_count, thread_delay, log, sleep } = require('./utils.js');
 dotenv.config();
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// 异步加载 chalk
+import('chalk').then(module => {
+  chalk = module.default;
+  chalkReady = true;
+  startApp();
+}).catch(err => {
+  console.error('Failed to import chalk:', err);
+  process.exit(1);
+});
 
 // 读取私钥和csv中的私钥
 const PRIVATE_KEYS = (() => {
@@ -53,7 +59,7 @@ const PROXY_URLS = (() => {
 })();
 
 // 核心业务流程
-export async function mainLoop(privateKey, proxy, referral_code) {
+async function mainLoop(privateKey, proxy, referral_code) {
     try {
         log(chalk.yellow(`⇄ 开始登录...，使用代理 ${proxy || '无'}`));
         const worker = new Bot(privateKey, proxy, referral_code);
@@ -108,24 +114,34 @@ async function startTask() {
 }
 
 // 主程序启动
-if (process.env.PM2 || import.meta.url === `file://${process.argv[1]}`) {
-  console.log(chalk.bold.green("=================== Aizoro 自动机器人 ==================="));
-  
-  if (!PRIVATE_KEYS.length) {
-    console.log(chalk.red("❌ 未找到有效私钥，请创建 private_keys.txt 文件"));
-    process.exit(1);
+function startApp() {
+  if (!chalkReady) return;
+
+  // 将原来的主程序启动代码移动到这里
+  if (process.env.PM2 || require.main === module) {
+      console.log(chalk.bold.green("=================== Aizoro 自动机器人 ==================="));
+      
+      if (!PRIVATE_KEYS.length) {
+          console.log(chalk.red("❌ 未找到有效私钥，请创建 private_keys.txt 文件"));
+          process.exit(1);
+      }
+
+      // 添加定时任务
+      // 默认每天北京时间早上9点执行
+      cron.schedule("0 9 * * *", () => {
+          console.log(chalk.cyan(`\n🕒 ${new Date().toLocaleString()} 触发定时任务`));
+          startTask();
+      }, {
+          scheduled: true,
+          timezone: "Asia/Shanghai"
+      });
+
+      // 立即执行一次
+      startTask();
   }
-
-  // 添加定时任务
-  // 默认每天北京时间早上9点执行
-  cron.schedule("0 9 * * *", () => {
-    console.log(chalk.cyan(`\n🕒 ${new Date().toLocaleString()} 触发定时任务`));
-    startTask();
-  }, {
-    scheduled: true,
-    timezone: "Asia/Shanghai"
-  });
-
-  // 立即执行一次
-  startTask();
 }
+
+module.exports = {
+  mainLoop,
+  startTask
+};

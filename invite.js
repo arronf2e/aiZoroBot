@@ -94,9 +94,11 @@ async function main() {
     // 从 REFERRAL_CODE 中随机获取一个邀请码
     const referralCodes = JSON.parse(process.env.REFERRAL_CODE);
     for (const referralCode of referralCodes) {
-        console.log(`🎁 本次使用的邀请码: ${referralCode}`);
+        // 生成 5 到 10 之间的随机数
+        const walletCount = Math.floor(Math.random() * 6) + 5;
 
-        const walletCount = process.env.INVITE_COUNT;
+        console.log(`🎁 本次使用的邀请码: ${referralCode}， 共邀请 ${walletCount}个账号`);
+
         const wallets = generateWallets(parseInt(walletCount));
 
         const saveWallet = [];

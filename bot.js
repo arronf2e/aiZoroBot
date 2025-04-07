@@ -1,55 +1,27 @@
-import { workerData, parentPort } from 'worker_threads';
+import { ethers } from 'ethers';
 import { SocksProxyAgent } from 'socks-proxy-agent';
 import { HttpsProxyAgent } from 'https-proxy-agent';
-import { ethers } from 'ethers';
-import axios from 'axios';
-import chalk from 'chalk';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import FormData from 'form-data';
 import { generate } from 'random-username-generator';
+import fs from 'fs';
+import path from 'path';
+import chalk from 'chalk';
+import { fileURLToPath } from 'url';
+import axios from 'axios';
+import { log, sleep } from './utils.js';
+
+
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// 工具函数
-const log = msg => {
-    const time = new Date().toLocaleTimeString();
-    parentPort.postMessage(`${chalk.gray(`[${time}]`)} ${msg}`);
-};
 
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+const api_base_url = "https://api.zoro.org"
 
-const THREAD_DELAY = Math.random() * (workerData.MAX_THREAD_DELAY) * 1000; // 随机延迟 0-60 秒
-
-const PROJECT_ID = '9028bb8f-29c1-4740-a229-2cfc1a3460ef'
-
-// 核心业务流程
-async function mainLoop() {
-    try {
-        log(chalk.yellow(`⇄ 开始登录...，使用代理 ${workerData.proxy || '无'}`));
-        const worker = new Worker(workerData);
-        await worker.login();
-        await delay(1000)
-        await worker.getMe();
-        await worker.getScoreboard();
-        await delay(5000)
-        await worker.checkIn();
-        await delay(2000)
-        await worker.getMe();
-        await worker.getScoreboard();
-        await worker.getMissonOnboard();
-        await delay(5000)
-        await worker.getProfileTasks();
-    } catch (error) {
-        console.log(error, 'error')
-        log(chalk.red(`流程错误: ${error.data}`));
-    }
-}
+const project_id = '9028bb8f-29c1-4740-a229-2cfc1a3460ef'
 
 function createApiClient(token, proxy) {
     const axiosConfig = {
-        baseURL: workerData.base.api_base_url,
+        baseURL: api_base_url,
         headers: {
             "accept": "*/*",
             "accept-language": "zh-CN,zh;q=0.9",
@@ -82,12 +54,13 @@ function createApiClient(token, proxy) {
     return axios.create(axiosConfig);
 }
 
-class Worker {
-    constructor(workerData) {
-        this.workerData = workerData;
-        this.wallet = new ethers.Wallet(workerData.privateKey);
-        this.client = createApiClient("", workerData.proxy);
-        log(chalk.yellow(`👛 钱包 ${this.wallet.address.slice(0, 6)}... 开始运行`));
+export class Bot {
+    constructor(privateKey, proxy, referral_code) {
+        this.wallet = new ethers.Wallet(privateKey);
+        this.client = createApiClient("", proxy);
+        this.referral_code = referral_code;
+        this.proxy = proxy;
+        log(chalk.yellow(`👛 钱包 ${this.wallet.address}... 开始运行`));
     }
 
     async login(message = '', signature = '', token = '') {
@@ -95,7 +68,7 @@ class Worker {
         log(chalk.green(message ? `🔐 开始登录中...` : `🔐 获取登录message中...`));
         let loginUrl = `/user-auth/wallet/login-request?strategy=ETHEREUM_SIGNATURE&address=${this.wallet.address}`;
         if (message && signature && token) {
-            loginUrl = `/user-auth/login?strategy=ETHEREUM_SIGNATURE&address=${this.wallet.address}&message=${message}&signature=${signature}&token=${token}&inviter=${workerData.base.referral_code}`;
+            loginUrl = `/user-auth/login?strategy=ETHEREUM_SIGNATURE&address=${this.wallet.address}&message=${message}&signature=${signature}&token=${token}&inviter=${this.referral_code}`;
         }
         const logRes = await this.client.get(loginUrl);
         log(chalk.green(message ? `🔐 ✅ 登录成功，已登录...` : `🔐 ✅ 登录 message 信息获取成功，准备登录...`));
@@ -103,10 +76,10 @@ class Worker {
             const message = logRes.data?.message;
             const token = logRes.data?.token;
             const signature = await this.wallet.signMessage(message);
-            await delay(2000)
+            await sleep(2000)
             await this.login(message, signature, token);
         } else {
-            this.client = createApiClient(logRes.data?.tokens?.access_token, this.workerData.proxy);
+            this.client = createApiClient(logRes.data?.tokens?.access_token, this.proxy);
             if (!logRes.data?.user?.nickname) {
                 await this.setUserName();
             }
@@ -114,7 +87,6 @@ class Worker {
     }
 
     async setUserName() {
-        // 有点问题，待修复
         log(chalk.green(`⏳ 设置用户名...`));
         try {
             const randomName = `${generate()}${Math.floor(Math.random() * 10000)}`;
@@ -135,7 +107,7 @@ class Worker {
                 log(chalk.green(` ✅ 今日已签到，无需重复签到`));
                 return;
             }
-            await delay(2000)
+            await sleep(2000)
             log(chalk.green(`⏳ 今日未签到，开始签到...`));
             // 有点问题，待修复 
             await this.client.post('/daily-rewards/claim', null, {
@@ -164,7 +136,7 @@ class Worker {
     async getMe() {
         log(chalk.green(`⏳ 获取用户信息...`));
         try {
-            const response = await this.client.get('/boost/me?game=false');
+            await this.client.get('/boost/me?game=false');
             // log(chalk.green(` ✅ 用户名：${response?.nickname}，积分：${response?.points?.bscAddress}`));
         } catch (error) {
             console.error('获取用户信息失败:', error.response?.status, error.response?.data || error.message);
@@ -174,7 +146,7 @@ class Worker {
     async getMissonOnboard() {
         log(chalk.green(`⏳ 检测onboard任务状态...`));
         try {
-            const response = await this.client.get(`/mission-onboard?id=${PROJECT_ID}`);
+            const response = await this.client.get(`/mission-onboard?id=${project_id}`);
             const result = response.data;
             for (const item of result) {
                 const { progress, total, label } = item;
@@ -184,7 +156,7 @@ class Worker {
                 }
                 if (progress < total) {
                     log(chalk.green(` ✅ ${label} 任务未完成，开始执行任务... ${progress + 1}/${total}`));
-                    await delay(2000)
+                    await sleep(2000)
                     const id = await this.getUploadId();
                     await this.doMissionOnboard(label, id);
                 }
@@ -198,7 +170,7 @@ class Worker {
     async getUploadId() {
         log(chalk.green(`⏳ 获取文件上传id...`));
         try {
-            const response = await this.client.get(`/mission-onboard/${PROJECT_ID}/missions?pagination%5Bfrom%5D=0&pagination%5Bto%5D=0&filter%5Bhidden%5D=false`);
+            const response = await this.client.get(`/mission-onboard/${project_id}/missions?pagination%5Bfrom%5D=0&pagination%5Bto%5D=0&filter%5Bhidden%5D=false`);
             return response?.data?.data?.[0]?.id;
         } catch (error) {
             console.error('获取文件上传id失败:', error.response?.status, error.response?.data || error.message);
@@ -250,15 +222,15 @@ class Worker {
                     }
                 });
                 log(chalk.green(` ✅ ${label} 任务执行成功`));
-                await delay(10000);
+                await sleep(10000);
                 await this.getMissonOnboard();
                 return; // 成功则退出方法
             } catch (error) {
                 retryCount++;
                 if (retryCount <= maxRetries) {
-                    const delayTime = 2000 * retryCount; // 指数退避延迟
-                    log(chalk.yellow(`⚠️ ${label} 任务执行失败（${retryCount}/${maxRetries}次重试）: ${error.message}，${delayTime/1000}秒后重试...`));
-                    await delay(delayTime);
+                    const sleepTime = 2000 * retryCount; // 指数退避延迟
+                    log(chalk.yellow(`⚠️ ${label} 任务执行失败（${retryCount}/${maxRetries}次重试）: ${error.message}，${sleepTime/1000}秒后重试...`));
+                    await sleep(sleepTime);
                 } else {
                     log(chalk.red(`❌ ${label} 任务最终失败，已尝试${maxRetries}次`));
                     console.error('执行onboard任务失败:', error.response?.status, error.response?.data || error.message);
@@ -303,7 +275,7 @@ class Worker {
                     continue;
                 }
                 await this.doProfileTask(label, id); // 调用方法来执行任务
-                await delay(10000) // 等待10秒后再加载下一个任务，避免触发Ratelimit
+                await sleep(10000) // 等待10秒后再加载下一个任务，避免触发Ratelimit
             }
 
         } catch (error) {
@@ -323,12 +295,3 @@ class Worker {
         }
     }
 }
-
-async function startWithDelay() {
-    log(chalk.yellow(`⏳ 线程将在 ${(THREAD_DELAY / 1000).toFixed(1)} 秒后开始...`));
-    await new Promise(resolve => setTimeout(resolve, THREAD_DELAY));
-    mainLoop();
-}
-
-// 替换原来的启动命令
-startWithDelay();

@@ -3,7 +3,8 @@ const { ethers } = require('ethers');
 const path = require('path');
 const dotenv = require('dotenv');
 const cron = require('node-cron');
-const { mainLoop } = require('./main.js');
+const { Bot } = require('./bot.js');
+const { log, sleep } = require('./utils.js');
 
 dotenv.config();
 
@@ -67,6 +68,28 @@ function saveWallets(wallets, randomReferralCode) {
     }
 }
 
+async function inviteLoop(privateKey, referral_code) {
+    try {
+        const worker = new Bot(privateKey, null, referral_code);
+        await worker.login();
+        await sleep(1000)
+        await worker.getMe();
+        await worker.getScoreboard();
+        await sleep(5000)
+        await worker.checkIn();
+        await sleep(2000)
+        await worker.getMe();
+        await worker.getScoreboard();
+        await worker.getMissonOnboard();
+        await sleep(5000)
+        await worker.getProfileTasks();
+    } catch (error) {
+        console.log(error, 'error')
+        log(chalk.red(`邀请流程错误: ${error.data}`));
+    }
+}
+
+
 async function main() {
     // 从 REFERRAL_CODE 中随机获取一个邀请码
     const referralCodes = JSON.parse(process.env.REFERRAL_CODE);
@@ -81,7 +104,7 @@ async function main() {
         for (const wallet of wallets) {
             console.log('------------------------------');
             console.log(`🔑 钱包地址: ${wallet.address} 开始注册`);
-            await mainLoop(wallet.privateKey, null, referralCode);
+            await inviteLoop(wallet.privateKey, referralCode);
             console.log('------------------------------');
             saveWallet.push(wallet);
         }

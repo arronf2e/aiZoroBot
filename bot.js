@@ -178,33 +178,27 @@ export class Bot {
     }
 
     async getRandomImage() {
+        log(`Fetching image from URL: https://picsum.photos/400`);
+        const formData = new FormData();
+        const axiosConfig = {};
         try {
-            const imagesDir = path.join(__dirname, 'images');
-            // 获取images文件夹中的所有图片文件
-            const files = fs.readdirSync(imagesDir).filter(file =>
-                ['.jpg', '.jpeg', '.png', '.webp'].includes(path.extname(file).toLowerCase())
-            );
-
-            if (files.length === 0) {
-                log(chalk.red('❌ images文件夹中没有图片'));
-                return null;
-            }
-
-            // 随机选择一张图片
-            const randomFile = files[Math.floor(Math.random() * files.length)];
-            const imagePath = path.join(imagesDir, randomFile);
-
-            // 创建FormData并添加图片
-            const formData = new FormData();
-            formData.append('image', fs.createReadStream(imagePath), {
-                filename: randomFile,
+            const response = await axios({
+                method: 'get',
+                url: 'https://picsum.photos/400',
+                responseType: 'arraybuffer',
+                ...axiosConfig
+            });
+            const imageData = Buffer.from(response.data);
+            log(`Image fetched: ${(imageData.length / 1024).toFixed(2)} KB`);
+            formData.append('image', imageData, {
+                filename: 'random.jpg',
                 contentType: 'image/jpeg'
             });
-
+            
             return formData;
         } catch (error) {
-            console.error('获取随机图片失败:', error.message);
-            return null;
+            log(`Error fetching image: ${error.message}`);
+            throw error;
         }
     }
 

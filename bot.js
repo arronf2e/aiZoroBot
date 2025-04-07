@@ -2,7 +2,7 @@ const { ethers } = require('ethers');
 const { SocksProxyAgent } = require('socks-proxy-agent');
 const { HttpsProxyAgent } = require('https-proxy-agent');
 const FormData = require('form-data');
-const { generate } = require('random-username-generator');
+const { faker } = require('@faker-js/faker');
 const axios = require('axios');
 const { log, sleep } = require('./utils.js');
 
@@ -89,7 +89,7 @@ class Bot {
     async setUserName() {
         log(chalk.green(`⏳ 设置用户名...`));
         try {
-            const randomName = `${generate()}${Math.floor(Math.random() * 10000)}`;
+            const randomName = `${faker.person.firstName()} ${faker.person.lastName()}`;
             await this.client.get(`/user/check-nickname/${randomName}`);
             await this.client.post(`/user/set-nickname?nickname=${randomName}`);
             log(chalk.green(` ✅ 用户名设置成功，用户名：${randomName}`));

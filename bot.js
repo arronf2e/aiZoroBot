@@ -1,18 +1,18 @@
-import { ethers } from 'ethers';
-import { SocksProxyAgent } from 'socks-proxy-agent';
-import { HttpsProxyAgent } from 'https-proxy-agent';
-import FormData from 'form-data';
-import { generate } from 'random-username-generator';
-import fs from 'fs';
-import path from 'path';
-import chalk from 'chalk';
-import { fileURLToPath } from 'url';
-import axios from 'axios';
-import { log, sleep } from './utils.js';
+const { ethers } = require('ethers');
+const { SocksProxyAgent } = require('socks-proxy-agent');
+const { HttpsProxyAgent } = require('https-proxy-agent');
+const FormData = require('form-data');
+const { generate } = require('random-username-generator');
+const axios = require('axios');
+const { log, sleep } = require('./utils.js');
 
-
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+let chalk;
+import('chalk').then(module => {
+    chalk = module.default;
+}).catch(err => {
+    console.error('Failed to import chalk:', err);
+    process.exit(1);
+});
 
 
 const api_base_url = "https://api.zoro.org"
@@ -54,7 +54,7 @@ function createApiClient(token, proxy) {
     return axios.create(axiosConfig);
 }
 
-export class Bot {
+class Bot {
     constructor(privateKey, proxy, referral_code) {
         this.wallet = new ethers.Wallet(privateKey);
         this.client = createApiClient("", proxy);
@@ -206,7 +206,7 @@ export class Bot {
         log(chalk.green(`⏳ 开始执行 ${label} 任务...`));
         const maxRetries = 3; // 最大重试次数
         let retryCount = 0;
-        
+
         do {
             try {
                 const formData = await this.getRandomImage();
@@ -223,7 +223,7 @@ export class Bot {
                 retryCount++;
                 if (retryCount <= maxRetries) {
                     const sleepTime = 2000 * retryCount; // 指数退避延迟
-                    log(chalk.yellow(`⚠️ ${label} 任务执行失败（${retryCount}/${maxRetries}次重试）: ${error.message}，${sleepTime/1000}秒后重试...`));
+                    log(chalk.yellow(`⚠️ ${label} 任务执行失败（${retryCount}/${maxRetries}次重试）: ${error.message}，${sleepTime / 1000}秒后重试...`));
                     await sleep(sleepTime);
                 } else {
                     log(chalk.red(`❌ ${label} 任务最终失败，已尝试${maxRetries}次`));
@@ -289,3 +289,5 @@ export class Bot {
         }
     }
 }
+
+module.exports = { Bot };

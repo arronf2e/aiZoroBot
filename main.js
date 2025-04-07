@@ -108,7 +108,7 @@ async function startTask() {
 }
 
 // 主程序启动
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.env.PM2 || import.meta.url === `file://${process.argv[1]}`) {
   console.log(chalk.bold.green("=================== Aizoro 自动机器人 ==================="));
   
   if (!PRIVATE_KEYS.length) {
@@ -120,7 +120,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // 默认每天北京时间早上9点执行
   cron.schedule("0 9 * * *", () => {
     console.log(chalk.cyan(`\n🕒 ${new Date().toLocaleString()} 触发定时任务`));
-    startWorkers();
+    startTask();
   }, {
     scheduled: true,
     timezone: "Asia/Shanghai"

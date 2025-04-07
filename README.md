@@ -37,27 +37,12 @@ socks5://127.0.0.1:1080
 
 新建 images 文件夹，在该文件夹下保存任意张图片。
 
-在 `config.yaml` 文件中配置基础配置。
-
-```yaml
-base:
-  api_base_url: 'https://api1-pp.klokapp.ai/v1' # 不用改
-  referral_code: "VECHW2KC"  # 填写你的邀请码
-
-runner:
-  thread_count: 1  # 线程池大小，同时跑多少个号
-  max_thread_delay: 60  # 最大线程延迟，单位秒
-
-# 定时任务配置
-scheduler:
-  jobs:
-    - name: "chat_daily"
-      schedule: "0 9 * * *"  # 每天上午8点
-```
-
 
 ### 4. 运行脚本(默认每天早上8点执行，推荐使用pm2启动)
 ```bash
 node main.js # 直接运行
 pm2 start main.js # 使用pm2启动
+
+# 邀请
+node invite.js # 直接运行
 ```
